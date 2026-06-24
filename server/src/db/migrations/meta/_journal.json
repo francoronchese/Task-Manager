@@ -8,6 +8,13 @@
       "when": 1780961145102,
       "tag": "0000_outgoing_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1782175232149,
+      "tag": "0001_fresh_stick",
+      "breakpoints": true
     }
   ]
 }

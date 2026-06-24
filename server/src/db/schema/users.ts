@@ -20,6 +20,7 @@ export const users = pgTable("users", {
   avatar: varchar(),
   role: userRoleEnum().default("member").notNull(),
   verifyEmail: boolean("verify_email").default(false).notNull(),
+  verifyEmailIssuedAt: timestamp("verify_email_issued_at"),
   forgotPasswordOtp: char("forgot_password_otp", { length: 6 }),
   forgotPasswordExpiry: timestamp("forgot_password_expiry"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -51,11 +52,11 @@ export const refreshTokens = pgTable("refresh_tokens", {
     .notNull()
     .references(() => users.id),
   token: varchar().unique().notNull(),
+  revokedAt: timestamp("revoked_at"),
   ipAddress: varchar("ip_address"),
   browser: varchar(),
   os: varchar(),
   device: varchar(),
   expiresAt: timestamp("expires_at").notNull(),
-  revokedAt: timestamp("revoked_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

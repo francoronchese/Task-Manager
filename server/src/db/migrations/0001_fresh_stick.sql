@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "verify_email_issued_at" timestamp;

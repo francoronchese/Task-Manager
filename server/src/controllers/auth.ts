@@ -6,12 +6,36 @@ import {
   ValidationError,
   ConflictError,
   UnauthorizedError,
+  NotFoundError,
 } from "../middlewares/errorHandler.js";
-import { generateAccessToken, generateRefreshToken } from "../utils/tokens.js";
-import { loginSchema, registerSchema } from "../validators/auth.js";
-import { createUser, findUserByEmail } from "../db/queries/users.js";
-import { createRefreshToken, findRefreshToken, revokeRefreshToken } from "../db/queries/refreshTokens.js";
+import {
+  generateAccessToken,
+  generateEmailVerifyToken,
+  generateRefreshToken,
+} from "../utils/tokens.js";
+import {
+  forgotPasswordSchema,
+  loginSchema,
+  registerSchema,
+  resetPasswordSchema,
+} from "../validators/auth.js";
+import {
+  createUser,
+  findUserByEmail,
+  findUserById,
+  resetUserPassword,
+  saveEmailVerifyIssuedAt,
+  savePasswordOtp,
+  verifyUserEmail,
+} from "../db/queries/users.js";
+import {
+  createRefreshToken,
+  findRefreshToken,
+  revokeRefreshToken,
+} from "../db/queries/refreshTokens.js";
 import { config } from "../config.js";
+import { generateOtp } from "../utils/otp.js";
+import { sendOtpEmail, sendVerifyEmail } from "../utils/email.js";
 
 // REGISTER CONTROLLER
 export async function register(
@@ -39,7 +63,14 @@ export async function register(
   const passwordHash = await argon2.hash(password);
 
   // Insert the new user into the database
-  await createUser({ name, email, passwordHash, avatar });
+  const newUser = await createUser({ name, email, passwordHash, avatar });
+
+  // Generate email verification token and extract its issued-at timestamp
+  const verifyToken = generateEmailVerifyToken(newUser.id);
+  const decoded = jwt.decode(verifyToken) as { iat: number };
+  const verifyUrl = `${config.clientUrl}/verify-email?token=${verifyToken}`;
+  await saveEmailVerifyIssuedAt(email, new Date(decoded.iat * 1000));
+  await sendVerifyEmail(email, verifyUrl);
 
   return res.status(201).json({ message: "User registered successfully" });
 }
@@ -79,7 +110,11 @@ export async function login(req: Request, res: Response, next: NextFunction) {
 }
 
 // REFRESH TOKEN CONTROLLER
-export async function refreshToken(req: Request, res: Response, next: NextFunction) {
+export async function refreshToken(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   const { refreshToken: token } = req.body;
   if (!token) {
     return next(new UnauthorizedError({ error: "No token provided" }));
@@ -119,4 +154,126 @@ export async function logout(req: Request, res: Response, next: NextFunction) {
   // Revoke the refresh token
   await revokeRefreshToken(token);
   return res.json({ message: "Logged out successfully" });
+}
+
+// FORGOT PASSWORD CONTROLLER
+export async function forgotPassword(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  // Validate request body against the forgot password schema
+  const result = forgotPasswordSchema.safeParse(req.body);
+  if (!result.success) {
+    return next(
+      new ValidationError({ errors: z.flattenError(result.error).fieldErrors }),
+    );
+  }
+
+  const { email } = result.data;
+
+  // Check if user exists
+  const user = await findUserByEmail(email);
+  if (!user) {
+    return res.json({
+      message: "If that email is registered, you will receive an OTP",
+    });
+  }
+
+  // Generate OTP and set expiry to 15 minutes from now
+  const otp = generateOtp();
+  const expiry = new Date(Date.now() + 15 * 60 * 1000);
+
+  // Save OTP to the database
+  await savePasswordOtp(email, otp, expiry);
+  //Send OTP via email with Resend
+  await sendOtpEmail(email, otp);
+  return res.json({
+    message: "If that email is registered, you will receive an OTP",
+  });
+}
+
+// RESET PASSWORD CONTROLLER
+export async function resetPassword(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  // Validate request body against the reset password schema
+  const result = resetPasswordSchema.safeParse(req.body);
+  if (!result.success) {
+    return next(
+      new ValidationError({ errors: z.flattenError(result.error).fieldErrors }),
+    );
+  }
+
+  const { email, otp, password } = result.data;
+  // Check if user exists
+  const user = await findUserByEmail(email);
+  if (!user) {
+    return next(new NotFoundError({ error: "User not found" }));
+  }
+
+  // Check if OTP is expired
+  if (!user.forgotPasswordExpiry || user.forgotPasswordExpiry < new Date()) {
+    return next(new UnauthorizedError({ error: "OTP has expired" }));
+  }
+
+  // Check if OTP matches
+  if (user.forgotPasswordOtp !== otp) {
+    return next(new UnauthorizedError({ error: "Invalid OTP" }));
+  }
+
+  // Hash the new password
+  const passwordHash = await argon2.hash(password);
+  // Update the user's password and clear the OTP fields
+  await resetUserPassword(email, passwordHash);
+  return res.json({ message: "Password reset successfully" });
+}
+
+// VERIFY EMAIL CONTROLLER
+export async function verifyEmail(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const { token } = req.query;
+  if (!token || typeof token !== "string") {
+    return next(new UnauthorizedError({ error: "No token provided" }));
+  }
+  // Verify token signature and extract userId
+  let payload: { userId: number; iat: number };
+  try {
+    // jwt.verify() returns JwtPayload, so a type assertion is used to tell TypeScript the payload only contains userId and iat
+    payload = jwt.verify(token, config.jwt.accessSecret) as {
+      userId: number;
+      iat: number;
+    };
+  } catch {
+    return next(new UnauthorizedError({ error: "Invalid or expired token" }));
+  }
+
+  // Check if user exists
+  const user = await findUserById(payload.userId);
+  if (!user) {
+    return next(new NotFoundError({ error: "User not found" }));
+  }
+
+  // Check if email is already verified
+  if (user.verifyEmail) {
+    return res.json({ message: "Email already verified" });
+  }
+
+  // Check if token was issued before the last verification email was sent
+  // payload.iat is the token's issued-at timestamp in seconds, so it must be converted to milliseconds to create a Date
+  if (
+    user.verifyEmailIssuedAt &&
+    new Date(payload.iat * 1000) < user.verifyEmailIssuedAt
+  ) {
+    return next(new UnauthorizedError({ error: "Invalid or expired token" }));
+  }
+
+  // Mark email as verified
+  await verifyUserEmail(payload.userId);
+  return res.json({ message: "Email verified successfully" });
 }

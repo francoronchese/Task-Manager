@@ -16,6 +16,8 @@ type Config = {
   db: DBConfig;
   jwt: JWTConfig;
   port: number;
+  resendApiKey: string;
+  clientUrl: string;
 };
 
 const dbURL = process.env.DB_URL;
@@ -28,6 +30,13 @@ if (!jwtAccessSecret)
 const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
 if (!jwtRefreshSecret)
   throw new Error("Missing environment variable: JWT_REFRESH_SECRET");
+
+const resendApiKey = process.env.RESEND_API_KEY;
+if (!resendApiKey)
+  throw new Error("Missing environment variable: RESEND_API_KEY");
+
+const clientUrl = process.env.CLIENT_URL;
+if (!clientUrl) throw new Error("Missing environment variable: CLIENT_URL");
 
 // Centralized configuration object that provides database connection and migration settings to the application
 export const config: Config = {
@@ -42,4 +51,6 @@ export const config: Config = {
     refreshSecret: jwtRefreshSecret,
   },
   port: Number(process.env.PORT) || 3000,
+  resendApiKey,
+  clientUrl,
 };
