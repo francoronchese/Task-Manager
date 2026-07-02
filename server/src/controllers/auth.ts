@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import argon2 from "argon2";
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import z from "zod";
 import {
@@ -33,9 +34,15 @@ import {
   findRefreshToken,
   revokeRefreshToken,
 } from "../db/queries/refreshTokens.js";
+import {
+  createUserProvider,
+  findUserProvider,
+} from "../db/queries/userProviders.js";
 import { config } from "../config.js";
 import { generateOtp } from "../utils/otp.js";
 import { sendOtpEmail, sendVerifyEmail } from "../utils/email.js";
+import { getGoogleAuthUrl, oauth2Client } from "../utils/googleOAuth.js";
+import { google } from "googleapis";
 
 // REGISTER CONTROLLER
 export async function register(
@@ -64,6 +71,9 @@ export async function register(
 
   // Insert the new user into the database
   const newUser = await createUser({ name, email, passwordHash, avatar });
+
+  // Register "local" as this user's auth provider
+  await createUserProvider({ userId: newUser.id, provider: "local" });
 
   // Generate email verification token and extract its issued-at timestamp
   const verifyToken = generateEmailVerifyToken(newUser.id);
@@ -276,4 +286,86 @@ export async function verifyEmail(
   // Mark email as verified
   await verifyUserEmail(payload.userId);
   return res.json({ message: "Email verified successfully" });
+}
+
+// GOOGLE AUTH CONTROLLER - Redirects the user to Google's consent page
+export function googleAuth(_req: Request, res: Response) {
+  const url = getGoogleAuthUrl();
+  return res.redirect(url);
+}
+
+// GOOGLE CALLBACK CONTROLLER - Handles the callback from Google after the user grants permission
+export async function googleCallback(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  // Google sends the authorization code as a query parameter after the user grants permission
+  const { code } = req.query;
+  if (!code || typeof code !== "string") {
+    return next(
+      new UnauthorizedError({ error: "No authorization code provided" }),
+    );
+  }
+
+  // This will provide an object with the access_token and refresh_token from Google
+  let tokens;
+  try {
+    ({ tokens } = await oauth2Client.getToken(code));
+  } catch {
+    return next(
+      new UnauthorizedError({ error: "Invalid or expired authorization code" }),
+    );
+  }
+  // Set the tokens on the OAuth2 client so it can make authenticated requests to Google APIs on behalf of the user
+  oauth2Client.setCredentials(tokens);
+
+  // Get the user's profile from Google using the oauth2 v2 API
+  const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
+  const { data } = await oauth2.userinfo.get({});
+  if (!data.email || !data.name || !data.verified_email) {
+    return next(
+      new UnauthorizedError({
+        error: "Could not retrieve verified user info from Google",
+      }),
+    );
+  }
+
+  // Check if user already exists - Google OAuth handles both registration and login.
+  // If the user exists, they are logged in. If not, a new account is created.
+  let user = await findUserByEmail(data.email);
+  if (!user) {
+    // Create a new user with a random password since they authenticate via Google
+    const passwordHash = await argon2.hash(crypto.randomUUID());
+    user = await createUser({
+      name: data.name,
+      email: data.email,
+      passwordHash,
+      avatar: data.picture ?? undefined,
+    });
+    // Google already verified this email, so the account starts as verified
+    await verifyUserEmail(user.id);
+  }
+
+  // Link the Google provider to this user if it isn't already linked
+  const existingProvider = await findUserProvider(user.id, "google");
+  if (!existingProvider) {
+    await createUserProvider({
+      userId: user.id,
+      provider: "google",
+      providerId: data.id ?? undefined,
+    });
+  }
+
+  // Generate tokens
+  const accessToken = generateAccessToken(user.id);
+  const refreshToken = generateRefreshToken(user.id);
+
+  // Save refresh token in the database
+  await createRefreshToken({ userId: user.id, token: refreshToken });
+
+  // Redirect to the frontend with the tokens
+  return res.redirect(
+    `${config.clientUrl}/oauth/callback?accessToken=${accessToken}&refreshToken=${refreshToken}`,
+  );
 }

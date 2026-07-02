@@ -12,12 +12,19 @@ type JWTConfig = {
   refreshSecret: string;
 };
 
+type GoogleConfig = {
+  clientId: string;
+  clientSecret: string;
+  callbackUrl: string;
+};
+
 type Config = {
   db: DBConfig;
   jwt: JWTConfig;
   port: number;
   resendApiKey: string;
   clientUrl: string;
+  google: GoogleConfig;
 };
 
 const dbURL = process.env.DB_URL;
@@ -38,6 +45,16 @@ if (!resendApiKey)
 const clientUrl = process.env.CLIENT_URL;
 if (!clientUrl) throw new Error("Missing environment variable: CLIENT_URL");
 
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+if (!googleClientId)
+  throw new Error("Missing environment variable: GOOGLE_CLIENT_ID");
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+if (!googleClientSecret)
+  throw new Error("Missing environment variable: GOOGLE_CLIENT_SECRET");
+const googleCallbackUrl = process.env.GOOGLE_CALLBACK_URL;
+if (!googleCallbackUrl)
+  throw new Error("Missing environment variable: GOOGLE_CALLBACK_URL");
+
 // Centralized configuration object that provides database connection and migration settings to the application
 export const config: Config = {
   db: {
@@ -53,4 +70,9 @@ export const config: Config = {
   port: Number(process.env.PORT) || 3000,
   resendApiKey,
   clientUrl,
+  google: {
+    clientId: googleClientId,
+    clientSecret: googleClientSecret,
+    callbackUrl: googleCallbackUrl,
+  },
 };
