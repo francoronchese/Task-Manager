@@ -1,6 +1,8 @@
 import type { MigrationConfig } from "drizzle-orm/migrator";
 
-process.loadEnvFile();
+// Vitest sets NODE_ENV to "test" automatically, so tests load .env.test instead of the regular .env and never touch the dev database
+const envFile = process.env.NODE_ENV === "test" ? ".env.test" : ".env";
+process.loadEnvFile(envFile);
 
 type DBConfig = {
   url: string;
