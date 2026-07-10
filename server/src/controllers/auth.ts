@@ -8,6 +8,7 @@ import {
   ConflictError,
   UnauthorizedError,
   NotFoundError,
+  ForbiddenError,
 } from "../middlewares/errorHandler.js";
 import {
   generateAccessToken,
@@ -107,6 +108,13 @@ export async function login(req: Request, res: Response, next: NextFunction) {
   const validPassword = await argon2.verify(user.passwordHash, password);
   if (!validPassword) {
     return next(new UnauthorizedError({ error: "Invalid credentials" }));
+  }
+
+  // Block login until the user has verified their email
+  if (!user.verifyEmail) {
+    return next(
+      new ForbiddenError({ error: "Please verify your email before logging in" }),
+    );
   }
 
   // Generate tokens
