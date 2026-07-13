@@ -67,4 +67,18 @@ describe("POST /api/auth/login", () => {
 
     expect(res.status).toBe(403);
   });
+
+  it("logs in successfully twice in a row without colliding refresh tokens", async () => {
+    const first = await request(app)
+      .post("/api/auth/login")
+      .send({ email: "test@example.com", password: plainPassword });
+
+    const second = await request(app)
+      .post("/api/auth/login")
+      .send({ email: "test@example.com", password: plainPassword });
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(second.body.refreshToken).not.toBe(first.body.refreshToken);
+  });
 });
