@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { db } from "../index.js";
-import { refreshTokens } from "../schema/index.js";
+import { db } from "@db/index.js";
+import { refreshTokens } from "@db/schema/index.js";
 
 type CreateRefreshTokenData = {
   userId: number;

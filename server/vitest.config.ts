@@ -1,7 +1,25 @@
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
 import { defineConfig } from "vitest/config";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Mirrors the path aliases from tsconfig.json. Vitest doesn't read tsconfig paths on its own
+const alias = {
+  "@app": resolve(__dirname, "src/app.ts"),
+  "@controllers": resolve(__dirname, "src/controllers"),
+  "@routes": resolve(__dirname, "src/routes"),
+  "@db": resolve(__dirname, "src/db"),
+  "@middlewares": resolve(__dirname, "src/middlewares"),
+  "@utils": resolve(__dirname, "src/utils"),
+  "@validators": resolve(__dirname, "src/validators"),
+  "@apptypes": resolve(__dirname, "src/types"),
+  "@config": resolve(__dirname, "src/config.ts"),
+};
 
 // Vitest config for the server's integration tests (Supertest)
 export default defineConfig({
+  resolve: { alias },
   test: {
     // Pure backend, no DOM needed
     environment: "node",

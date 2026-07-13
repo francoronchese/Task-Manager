@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { config } from "../config.js";
+import { config } from "@config";
 import { UnauthorizedError } from "./errorHandler.js";
 
 // Verifies the access token from the Authorization header and attaches the userId to the request

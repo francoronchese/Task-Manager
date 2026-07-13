@@ -1,8 +1,8 @@
 import request from "supertest";
-import app from "../../../app.js";
+import app from "@app";
+import { findUserByEmail } from "@db/queries/users.js";
+import { findUserProvider } from "@db/queries/userProviders.js";
 import { resetDb } from "../../helpers/resetDb.js";
-import { findUserByEmail } from "../../../db/queries/users.js";
-import { findUserProvider } from "../../../db/queries/userProviders.js";
 import {
   getGoogleAuthUrl,
   oauth2Client,

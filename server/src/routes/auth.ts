@@ -9,7 +9,7 @@ import {
   register,
   resetPassword,
   verifyEmail,
-} from "../controllers/auth.js";
+} from "@controllers/auth.js";
 
 const authRouter = Router();
 

@@ -9,18 +9,18 @@ import {
   UnauthorizedError,
   NotFoundError,
   ForbiddenError,
-} from "../middlewares/errorHandler.js";
+} from "@middlewares/errorHandler.js";
 import {
   generateAccessToken,
   generateEmailVerifyToken,
   generateRefreshToken,
-} from "../utils/tokens.js";
+} from "@utils/tokens.js";
 import {
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
   resetPasswordSchema,
-} from "../validators/auth.js";
+} from "@validators/auth.js";
 import {
   createUser,
   findUserByEmail,
@@ -29,20 +29,20 @@ import {
   saveEmailVerifyIssuedAt,
   savePasswordOtp,
   verifyUserEmail,
-} from "../db/queries/users.js";
+} from "@db/queries/users.js";
 import {
   createRefreshToken,
   findRefreshToken,
   revokeRefreshToken,
-} from "../db/queries/refreshTokens.js";
+} from "@db/queries/refreshTokens.js";
 import {
   createUserProvider,
   findUserProvider,
-} from "../db/queries/userProviders.js";
-import { config } from "../config.js";
-import { generateOtp } from "../utils/otp.js";
-import { sendOtpEmail, sendVerifyEmail } from "../utils/email.js";
-import { getGoogleAuthUrl, oauth2Client } from "../utils/googleOAuth.js";
+} from "@db/queries/userProviders.js";
+import { config } from "@config";
+import { generateOtp } from "@utils/otp.js";
+import { sendOtpEmail, sendVerifyEmail } from "@utils/email.js";
+import { getGoogleAuthUrl, oauth2Client } from "@utils/googleOAuth.js";
 import { google } from "googleapis";
 
 // REGISTER CONTROLLER
@@ -312,7 +312,7 @@ export async function googleCallback(
   const { code } = req.query;
   if (!code || typeof code !== "string") {
     return next(
-      new UnauthorizedError({ error: "No authorization code provided" }),
+      new UnauthorizedError({ error: "No Google authorization code provided" }),
     );
   }
 
@@ -322,7 +322,7 @@ export async function googleCallback(
     ({ tokens } = await oauth2Client.getToken(code));
   } catch {
     return next(
-      new UnauthorizedError({ error: "Invalid or expired authorization code" }),
+      new UnauthorizedError({ error: "Invalid or expired Google authorization code" }),
     );
   }
   // Set the tokens on the OAuth2 client so it can make authenticated requests to Google APIs on behalf of the user

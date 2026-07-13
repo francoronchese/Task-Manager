@@ -8,7 +8,19 @@
     "strict": true,
     "moduleResolution": "nodenext",
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": "./src",
+    "paths": {
+      "@app": ["app.ts"],
+      "@controllers/*": ["controllers/*"],
+      "@routes/*": ["routes/*"],
+      "@db/*": ["db/*"],
+      "@middlewares/*": ["middlewares/*"],
+      "@utils/*": ["utils/*"],
+      "@validators/*": ["validators/*"],
+      "@apptypes/*": ["types/*"],
+      "@config": ["config.ts"]
+    }
   },
   "include": ["./src/**/*.ts", "./drizzle.config.ts"],
   "exclude": ["node_modules"]

@@ -1,9 +1,9 @@
 import request from "supertest";
-import app from "../../../app.js";
+import app from "@app";
 import { resetDb } from "../../helpers/resetDb.js";
-import { createUser, verifyUserEmail } from "../../../db/queries/users.js";
-import { createRefreshToken } from "../../../db/queries/refreshTokens.js";
-import { generateRefreshToken } from "../../../utils/tokens.js";
+import { createUser, verifyUserEmail } from "@db/queries/users.js";
+import { createRefreshToken } from "@db/queries/refreshTokens.js";
+import { generateRefreshToken } from "@utils/tokens.js";
 
 let userId: number;
 

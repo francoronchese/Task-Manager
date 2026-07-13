@@ -1,11 +1,11 @@
 import request from "supertest";
-import app from "../../../app.js";
+import app from "@app";
 import { resetDb } from "../../helpers/resetDb.js";
 import {
   createUser,
   savePasswordOtp,
   verifyUserEmail,
-} from "../../../db/queries/users.js";
+} from "@db/queries/users.js";
 
 const registeredEmail = "test@example.com";
 const validOtp = "123456";

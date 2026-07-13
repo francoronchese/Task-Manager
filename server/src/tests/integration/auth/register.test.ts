@@ -1,5 +1,5 @@
 import request from "supertest";
-import app from "../../../app.js";
+import app from "@app";
 import { resetDb } from "../../helpers/resetDb.js";
 import { sendVerifyEmail } from "../../helpers/mockEmail.js";
 

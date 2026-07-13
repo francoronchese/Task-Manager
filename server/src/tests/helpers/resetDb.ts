@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { db } from "../../db/index.js";
+import { db } from "@db/index.js";
 
 // Truncates auth-related tables and restarts their id sequences, so each test starts from a clean state
 export async function resetDb() {

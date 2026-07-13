@@ -1,8 +1,8 @@
 import request from "supertest";
-import app from "../../../app.js";
+import app from "@app";
 import { resetDb } from "../../helpers/resetDb.js";
-import { createUser } from "../../../db/queries/users.js";
 import { sendOtpEmail } from "../../helpers/mockEmail.js";
+import { createUser } from "@db/queries/users.js";
 
 // Replaces utils/email.js with the fake versions from mockEmail.js
 vi.mock("../../../utils/email.js", () => import("../../helpers/mockEmail.js"));

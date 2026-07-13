@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { db } from "../index.js";
-import { users } from "../schema/index.js";
+import { db } from "@db/index.js";
+import { users } from "@db/schema/index.js";
 
 type CreateUserData = {
   name: string;

@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema/index.js";
-import { config } from "../config.js";
+import { config } from "@config";
 
 //Physical PostgreSQL connection using the database URL from config
 const conn = postgres(config.db.url);

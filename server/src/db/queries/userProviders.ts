@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
-import { db } from "../index.js";
-import { userProviders } from "../schema/index.js";
-import type { authProviderEnum } from "../schema/users.js";
+import { db } from "@db/index.js";
+import { userProviders } from "@db/schema/index.js";
+import type { authProviderEnum } from "@db/schema/users.js";
 
 type Provider = (typeof authProviderEnum.enumValues)[number];
 

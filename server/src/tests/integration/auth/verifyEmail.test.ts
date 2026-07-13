@@ -1,13 +1,13 @@
 import jwt from "jsonwebtoken";
 import request from "supertest";
-import app from "../../../app.js";
+import app from "@app";
 import { resetDb } from "../../helpers/resetDb.js";
 import {
   createUser,
   saveEmailVerifyIssuedAt,
   verifyUserEmail,
-} from "../../../db/queries/users.js";
-import { generateEmailVerifyToken } from "../../../utils/tokens.js";
+} from "@db/queries/users.js";
+import { generateEmailVerifyToken } from "@utils/tokens.js";
 
 const registeredEmail = "test@example.com";
 
